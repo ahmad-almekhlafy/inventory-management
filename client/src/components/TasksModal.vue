@@ -277,55 +277,55 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: var(--space-6) var(--space-8);
   border-bottom: 2px solid #e2e8f0;
 }
 
 .modal-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-text);
   margin: 0;
 }
 
 .close-button {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--color-text-muted);
   cursor: pointer;
-  padding: 0.5rem;
+  padding: var(--space-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   transition: all 0.2s ease;
 }
 
 .close-button:hover {
   background: #f1f5f9;
-  color: #0f172a;
+  color: var(--color-text);
 }
 
 .modal-body {
-  padding: 2rem;
+  padding: var(--space-8);
   overflow-y: auto;
   flex: 1;
 }
 
 .modal-footer {
-  padding: 1.5rem 2rem;
+  padding: var(--space-6) var(--space-8);
   border-top: 2px solid #e2e8f0;
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .btn-secondary {
-  padding: 0.75rem 1.5rem;
+  padding: var(--space-3) var(--space-6);
   background: #f1f5f9;
   color: #475569;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -339,14 +339,14 @@ export default {
 .task-form {
   background: #f8fafc;
   border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 .form-row {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .form-row:last-child {
@@ -356,7 +356,7 @@ export default {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex: 1;
 }
 
@@ -377,9 +377,9 @@ label {
 
 .task-input,
 .task-select {
-  padding: 0.75rem;
+  padding: var(--space-3);
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.95rem;
   transition: border-color 0.2s ease;
   font-family: inherit;
@@ -397,11 +397,11 @@ label {
 }
 
 .task-add-btn {
-  padding: 0.75rem 1.75rem;
+  padding: var(--space-3) 1.75rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-weight: 600;
   cursor: pointer;
   transition: transform 0.2s ease, opacity 0.2s ease;
@@ -421,13 +421,13 @@ label {
 .tasks-divider {
   height: 1px;
   background: #e2e8f0;
-  margin: 2rem 0;
+  margin: var(--space-8) 0;
 }
 
 .no-tasks {
   text-align: center;
-  padding: 3rem;
-  color: #64748b;
+  padding: var(--space-12);
+  color: var(--color-text-muted);
   font-size: 1.1rem;
   font-style: italic;
 }
@@ -435,14 +435,14 @@ label {
 .tasks-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .task-item {
   background: white;
   border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
   transition: all 0.2s ease;
 }
 
@@ -471,14 +471,14 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
-  gap: 1rem;
+  margin-bottom: var(--space-3);
+  gap: var(--space-4);
 }
 
 .task-check-title {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   flex: 1;
 }
 
@@ -494,7 +494,7 @@ label {
   flex: 1;
   cursor: pointer;
   user-select: none;
-  color: #0f172a;
+  color: var(--color-text);
   font-size: 1rem;
   font-weight: 600;
   line-height: 1.4;
@@ -511,7 +511,7 @@ label {
   background: #ef4444;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
@@ -531,14 +531,14 @@ label {
 .task-footer {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .priority-badge {
   font-size: 0.688rem;
   font-weight: 600;
   text-transform: uppercase;
-  padding: 0.25rem 0.625rem;
+  padding: var(--space-1) 0.625rem;
   border-radius: 4px;
   letter-spacing: 0.025em;
 }
@@ -561,9 +561,9 @@ label {
 .task-due-date {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   font-size: 0.813rem;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .task-due-date svg {
@@ -573,7 +573,7 @@ label {
 .status-badge {
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.25rem 0.625rem;
+  padding: var(--space-1) 0.625rem;
   border-radius: 4px;
   margin-left: auto;
 }

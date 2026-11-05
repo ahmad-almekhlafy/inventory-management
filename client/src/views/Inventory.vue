@@ -226,15 +226,15 @@ export default {
 
 <style scoped>
 .page-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 
 .page-header h2 {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 .page-header p {
-  color: #64748b;
+  color: var(--color-text-muted);
   font-size: 0.875rem;
 }
 
@@ -242,15 +242,15 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .card-title {
   font-size: 1rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--color-text);
   margin: 0;
 }
 
@@ -272,11 +272,11 @@ export default {
 
 .search-input {
   width: 100%;
-  padding: 0.5rem 2.5rem 0.5rem 2.5rem;
+  padding: var(--space-2) var(--space-10) var(--space-2) var(--space-10);
   border: 1px solid #cbd5e1;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
-  color: #0f172a;
+  color: var(--color-text);
   background: #f8fafc;
   transition: all 0.2s;
 }
@@ -298,7 +298,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
+  padding: var(--space-1);
   background: transparent;
   border: none;
   border-radius: 4px;
@@ -309,7 +309,7 @@ export default {
 
 .clear-search:hover {
   background: #e2e8f0;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .clear-search svg {
@@ -319,9 +319,9 @@ export default {
 
 .loading,
 .error {
-  padding: 2rem;
+  padding: var(--space-8);
   text-align: center;
-  color: #64748b;
+  color: var(--color-text-muted);
 }
 
 .error {

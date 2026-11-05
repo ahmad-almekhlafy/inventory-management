@@ -1,42 +1,42 @@
 <template>
-  <div class="app">
-    <header class="top-nav">
-      <div class="nav-container">
-        <div class="logo">
-          <h1>{{ t('nav.companyName') }}</h1>
-          <span class="subtitle">{{ t('nav.subtitle') }}</span>
-        </div>
-        <nav class="nav-tabs">
-          <router-link to="/" :class="{ active: $route.path === '/' }">
-            {{ t('nav.overview') }}
-          </router-link>
-          <router-link to="/inventory" :class="{ active: $route.path === '/inventory' }">
-            {{ t('nav.inventory') }}
-          </router-link>
-          <router-link to="/orders" :class="{ active: $route.path === '/orders' }">
-            {{ t('nav.orders') }}
-          </router-link>
-          <router-link to="/spending" :class="{ active: $route.path === '/spending' }">
-            {{ t('nav.finance') }}
-          </router-link>
-          <router-link to="/demand" :class="{ active: $route.path === '/demand' }">
-            {{ t('nav.demandForecast') }}
-          </router-link>
-          <router-link to="/reports" :class="{ active: $route.path === '/reports' }">
-            Reports
-          </router-link>
-        </nav>
-        <LanguageSwitcher />
-        <ProfileMenu
-          @show-profile-details="showProfileDetails = true"
-          @show-tasks="showTasks = true"
-        />
-      </div>
-    </header>
-    <FilterBar />
-    <main class="main-content">
-      <router-view />
-    </main>
+  <div class="app-shell" :class="{ collapsed: shellCollapsed }">
+    <AppSidebar
+      :collapsed="effectiveCollapsed"
+      :drawer-open="drawerOpen"
+      :overlay="overlayOpen"
+      @toggle-collapse="toggleCollapse"
+      @close-drawer="drawerOpen = false"
+    />
+    <div
+      v-if="drawerOpen"
+      class="drawer-backdrop"
+      aria-hidden="true"
+      @click="drawerOpen = false"
+    ></div>
+    <div
+      v-if="overlayOpen"
+      class="overlay-backdrop"
+      aria-hidden="true"
+      @click="overlayOpen = false"
+    ></div>
+
+    <div class="app-column">
+      <AppHeader @open-drawer="drawerOpen = true">
+        <template #filters>
+          <FilterBar />
+        </template>
+        <template #controls>
+          <LanguageSwitcher />
+          <ProfileMenu
+            @show-profile-details="showProfileDetails = true"
+            @show-tasks="showTasks = true"
+          />
+        </template>
+      </AppHeader>
+      <main class="main-content">
+        <router-view />
+      </main>
+    </div>
 
     <ProfileDetailsModal
       :is-open="showProfileDetails"
@@ -55,15 +55,19 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from './api'
 import { useAuth } from './composables/useAuth'
 import { useI18n } from './composables/useI18n'
+import { useBreakpoint } from './composables/useBreakpoint'
 import FilterBar from './components/FilterBar.vue'
 import ProfileMenu from './components/ProfileMenu.vue'
 import ProfileDetailsModal from './components/ProfileDetailsModal.vue'
 import TasksModal from './components/TasksModal.vue'
 import LanguageSwitcher from './components/LanguageSwitcher.vue'
+import AppSidebar from './components/AppSidebar.vue'
+import AppHeader from './components/AppHeader.vue'
 
 export default {
   name: 'App',
@@ -72,7 +76,9 @@ export default {
     ProfileMenu,
     ProfileDetailsModal,
     TasksModal,
-    LanguageSwitcher
+    LanguageSwitcher,
+    AppSidebar,
+    AppHeader
   },
   setup() {
     const { currentUser } = useAuth()
@@ -80,6 +86,51 @@ export default {
     const showProfileDetails = ref(false)
     const showTasks = ref(false)
     const apiTasks = ref([])
+    const route = useRoute()
+
+    const sidebarCollapsed = ref(localStorage.getItem('sidebar-collapsed') === 'true')
+    const drawerOpen = ref(false)
+
+    const overlayOpen = ref(false)
+    const { isMobile, isTablet } = useBreakpoint()
+
+    // sidebarCollapsed is only the saved desktop preference. The tier decides
+    // what is actually shown, so there is a single source of truth per tier.
+    // Tablet: always a rail, unless the transient overlay is open.
+    const effectiveCollapsed = computed(() => {
+      if (isMobile.value) return false
+      if (isTablet.value) return !overlayOpen.value
+      return sidebarCollapsed.value
+    })
+    // Content column width: the overlay floats above the content, so on tablet
+    // the column stays at rail width even while the overlay is open.
+    const shellCollapsed = computed(() => isTablet.value || sidebarCollapsed.value)
+
+    const toggleCollapse = () => {
+      if (isTablet.value) {
+        // Temporary expand only: must not overwrite the saved desktop preference
+        overlayOpen.value = !overlayOpen.value
+        return
+      }
+      sidebarCollapsed.value = !sidebarCollapsed.value
+      localStorage.setItem('sidebar-collapsed', String(sidebarCollapsed.value))
+    }
+
+    const closeTransient = () => {
+      drawerOpen.value = false
+      overlayOpen.value = false
+    }
+
+    // Close the drawer/overlay after navigating so it never covers the new page
+    watch(() => route.fullPath, closeTransient)
+    // Crossing a breakpoint resets transient state so nothing is left stuck open
+    watch([isMobile, isTablet], closeTransient)
+
+    const onKeydown = (e) => {
+      if (e.key === 'Escape') closeTransient()
+    }
+    onMounted(() => window.addEventListener('keydown', onKeydown))
+    onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
     // Merge mock tasks from currentUser with API tasks
     const tasks = computed(() => {
@@ -150,6 +201,11 @@ export default {
 
     return {
       t,
+      effectiveCollapsed,
+      shellCollapsed,
+      overlayOpen,
+      drawerOpen,
+      toggleCollapse,
       showProfileDetails,
       showTasks,
       tasks,
@@ -162,6 +218,82 @@ export default {
 </script>
 
 <style>
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-600: #475569;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --gray-900: #0f172a;
+
+  --color-bg: var(--gray-50);
+  --color-surface: #ffffff;
+  --color-border: var(--gray-200);
+  --color-border-strong: var(--gray-300);
+  --color-text: var(--gray-900);
+  --color-text-muted: var(--gray-500);
+  --color-text-subtle: var(--gray-400);
+
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-soft: #eff6ff;
+
+  --color-success: #16a34a;  --color-success-soft: #f0fdf4;
+  --color-warning: #d97706;  --color-warning-soft: #fffbeb;
+  --color-danger: #dc2626;   --color-danger-soft: #fef2f2;
+  --color-info: #2563eb;     --color-info-soft: #eff6ff;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+
+  --sidebar-w: 240px;
+  --sidebar-w-collapsed: 64px;
+  --header-h: 60px;
+  --content-max-w: 1440px;
+  --content-pad: var(--space-8);
+
+  --z-sidebar: 40;
+  --z-header: 30;
+  --z-dropdown: 50;
+  --z-drawer-backdrop: 60;
+  --z-drawer: 70;
+  --z-modal: 100;
+
+  --transition: 150ms ease;
+}
+
+@media (max-width: 768px) {
+  :root { --content-pad: var(--space-4); }
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -169,204 +301,177 @@ export default {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background: #f8fafc;
-  color: #1e293b;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  background: var(--color-bg);
+  color: var(--color-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-.app {
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Shell */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+  transition: grid-template-columns 200ms ease;
+}
+
+.app-shell.collapsed {
+  grid-template-columns: var(--sidebar-w-collapsed) minmax(0, 1fr);
+}
+
+.app-column {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-}
-
-.top-nav {
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
-
-.nav-container {
-  max-width: 1600px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  padding: 0 2rem;
-  height: 70px;
-}
-
-.nav-container > .nav-tabs {
-  margin-left: auto;
-  margin-right: 1rem;
-}
-
-.nav-container > .language-switcher {
-  margin-right: 1rem;
-}
-
-.logo {
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-}
-
-.logo h1 {
-  font-size: 1.375rem;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.025em;
-}
-
-.subtitle {
-  font-size: 0.813rem;
-  color: #64748b;
-  font-weight: 400;
-  padding-left: 0.75rem;
-  border-left: 1px solid #e2e8f0;
-}
-
-.nav-tabs {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.nav-tabs a {
-  padding: 0.625rem 1.25rem;
-  color: #64748b;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.938rem;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.nav-tabs a:hover {
-  color: #0f172a;
-  background: #f1f5f9;
-}
-
-.nav-tabs a.active {
-  color: #2563eb;
-  background: #eff6ff;
-}
-
-.nav-tabs a.active::after {
-  content: '';
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: #2563eb;
 }
 
 .main-content {
   flex: 1;
-  max-width: 1600px;
   width: 100%;
+  max-width: var(--content-max-w);
   margin: 0 auto;
-  padding: 1.5rem 2rem;
+  padding: var(--content-pad);
 }
 
+.drawer-backdrop {
+  display: none;
+}
+
+/* Tablet overlay backdrop: sits above the header, below the expanded sidebar */
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.2);
+  z-index: var(--z-drawer-backdrop);
+}
+
+@media (max-width: 768px) {
+  .app-shell,
+  .app-shell.collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: var(--z-drawer-backdrop);
+  }
+}
+
+/* Page header: the app header already shows the page title, so the view's
+   h2 is kept for screen readers only and the description stays visible. */
 .page-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 
 .page-header h2 {
-  font-size: 1.875rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin-bottom: 0.375rem;
-  letter-spacing: -0.025em;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.page-header:not(:has(p)) {
+  display: none;
 }
 
 .page-header p {
-  color: #64748b;
-  font-size: 0.938rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
 }
 
+/* Cards and stat tiles */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.25rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 .stat-card {
-  background: white;
-  padding: 1.25rem;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  transition: all 0.2s ease;
+  background: var(--color-surface);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 
 .stat-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-label {
-  color: #64748b;
-  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.625rem;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-2);
 }
 
 .stat-value {
-  font-size: 2.25rem;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.025em;
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
 }
 
-.stat-card.warning .stat-value {
-  color: #ea580c;
-}
-
-.stat-card.success .stat-value {
-  color: #059669;
-}
-
-.stat-card.danger .stat-value {
-  color: #dc2626;
-}
-
-.stat-card.info .stat-value {
-  color: #2563eb;
-}
+.stat-card.warning .stat-value { color: var(--color-warning); }
+.stat-card.success .stat-value { color: var(--color-success); }
+.stat-card.danger .stat-value { color: var(--color-danger); }
+.stat-card.info .stat-value { color: var(--color-info); }
 
 .card {
-  background: white;
-  border-radius: 10px;
-  padding: 1.25rem;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 1.25rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xs);
+  margin-bottom: var(--space-6);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 0.875rem;
-  border-bottom: 1px solid #e2e8f0;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .card-title {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.025em;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--color-text);
 }
 
+/* Cards that hold a table go edge to edge so rows align with the card border */
+.card:has(> .table-container),
+.card:has(> table) {
+  padding: 0;
+  overflow: hidden;
+}
+
+.card:has(> .table-container) > .card-header,
+.card:has(> table) > .card-header {
+  margin-bottom: 0;
+  padding: var(--space-4) var(--space-6);
+}
+
+/* Tables */
 .table-container {
   overflow-x: auto;
 }
@@ -377,110 +482,70 @@ table {
 }
 
 thead {
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
+  background: var(--gray-50);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
 }
 
 th {
   text-align: left;
-  padding: 0.5rem 0.75rem;
+  vertical-align: bottom;
+  padding: var(--space-3);
   font-weight: 600;
-  color: #475569;
-  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 td {
-  padding: 0.5rem 0.75rem;
-  border-top: 1px solid #f1f5f9;
-  color: #334155;
-  font-size: 0.875rem;
+  white-space: nowrap;
+  padding: var(--space-3);
+  border-top: 1px solid var(--gray-100);
+  color: var(--gray-700);
+  font-size: var(--text-base);
 }
 
 tbody tr {
-  transition: background-color 0.15s ease;
+  transition: background-color var(--transition);
 }
 
 tbody tr:hover {
-  background: #f8fafc;
+  background: var(--gray-50);
 }
 
+/* Badges: one status-to-color mapping for every page */
 .badge {
-  display: inline-block;
-  padding: 0.313rem 0.75rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  font-size: var(--text-xs);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
+  letter-spacing: 0.02em;
 }
 
-.badge.success {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge.warning {
-  background: #fed7aa;
-  color: #92400e;
-}
-
-.badge.danger {
-  background: #fecaca;
-  color: #991b1b;
-}
-
-.badge.info {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
-.badge.increasing {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-.badge.decreasing {
-  background: #fecaca;
-  color: #991b1b;
-}
-
-.badge.stable {
-  background: #e0e7ff;
-  color: #3730a3;
-}
-
-.badge.high {
-  background: #fecaca;
-  color: #991b1b;
-}
-
-.badge.medium {
-  background: #fed7aa;
-  color: #92400e;
-}
-
-.badge.low {
-  background: #dbeafe;
-  color: #1e40af;
-}
+.badge.success, .badge.increasing { background: var(--color-success-soft); color: var(--color-success); }
+.badge.warning, .badge.medium { background: var(--color-warning-soft); color: var(--color-warning); }
+.badge.danger, .badge.decreasing, .badge.high { background: var(--color-danger-soft); color: var(--color-danger); }
+.badge.info, .badge.low { background: var(--color-info-soft); color: var(--color-info); }
+.badge.stable { background: var(--gray-100); color: var(--gray-600); }
 
 .loading {
   text-align: center;
-  padding: 3rem;
-  color: #64748b;
-  font-size: 0.938rem;
+  padding: var(--space-12);
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
 }
 
 .error {
-  background: #fef2f2;
+  background: var(--color-danger-soft);
   border: 1px solid #fecaca;
   color: #991b1b;
-  padding: 1rem;
-  border-radius: 8px;
-  margin: 1rem 0;
-  font-size: 0.938rem;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin: var(--space-4) 0;
+  font-size: var(--text-base);
 }
 </style>
